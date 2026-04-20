@@ -45,6 +45,8 @@ def load_data():
 def save_data(df):
     client = get_gspread_client()
     sheet = client.open(SHEET_NAME).sheet1
+    df = df.fillna("").astype(str)
+    df = df.applymap(lambda x: x.replace("\n", " ").replace("\r", " "))
     sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
 df = load_data()
