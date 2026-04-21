@@ -34,7 +34,7 @@ def get_gspread_client():
     return gspread.authorize(creds)
 
 # ===== データ読み込み =====
-@st.cache_data(ttl=60)
+@st.cache_data
 def load_data():
     client = get_gspread_client()
     sheet = client.open(SHEET_NAME).sheet1
@@ -42,12 +42,15 @@ def load_data():
     return pd.DataFrame(data)
 
 # ===== データ保存 =====
-def save_data(df):
+def update_rank(target_id, new_rank):
     client = get_gspread_client()
     sheet = client.open(SHEET_NAME).sheet1
-    df = df.fillna("").astype(str)
-    df = df.map(lambda x: x.replace("\n", " ").replace("\r", " "))
-    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+
+    # ID列を検索（完全一致）
+    cell = sheet.find(str(target_id))
+
+    # Rankは4列目固定
+    sheet.update_cell(cell.row, 4, new_rank)
 
 df = load_data()
 
@@ -141,8 +144,7 @@ if st.session_state.show_answer:
         new_rank = st.selectbox("新しいRank", ["A", "B", "C"], index=["A", "B", "C"].index(current_rank), key="rank")
 
         if st.button("更新して次へ"):
-            df.loc[df["ID"] == row["ID"], "Rank"] = new_rank 
-            save_data(df)
+            update_rank(row["ID"], new_rank)
 
             # ★ yの場合：正解した問題だけをリスト(data)から削除
             st.session_state.data = st.session_state.data[st.session_state.data["ID"] != row["ID"]].reset_index(drop=True)
